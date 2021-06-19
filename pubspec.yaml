@@ -1,0 +1,35 @@
+name: ft
+description: A new Flutter project.
+
+version: 1.0.0+1
+
+environment:
+  sdk: ">=2.7.0 <3.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.2
+  nearby_connections: ^3.1.0
+  permission_handler: ^5.1.0+2
+  aes_crypt: ^0.1.1
+  file_picker: 1.13.3
+  image_picker: 0.6.7+17
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/sendArrow.jpeg
+    - assets/receiveArrow.jpeg
+  fonts:
+      - family: Comfortaa
+        fonts:
+          - asset: fonts/Comfortaa-Medium.ttf
+          - asset: fonts/Comfortaa-Regular.ttf
+            weight: 500
