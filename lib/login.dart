@@ -2,113 +2,95 @@ import 'package:flutter/material.dart';
 import 'share.dart';
 
 class Login extends StatefulWidget {
-  const Login({Key key}) : super(key: key);
+  const Login({Key? key}) : super(key: key);
 
   @override
   _LoginState createState() => _LoginState();
 }
 
 class _LoginState extends State<Login> {
-  final nameController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
+
+  TextEditingController username = TextEditingController();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
         child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 10),
           height: MediaQuery.of(context).size.height,
           decoration: BoxDecoration(
               gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: <Color>[Color(0xFF667eea), Color(0xFF764ba2)]
+                  colors: [
+                    Color(0xFF667eea),
+                    Color(0xFF764ba2),
+                  ]
               )
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(30,80,0,120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('File',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 50, color: Colors.white,fontFamily: 'Comfortaa'),
-                      ),
-                      SizedBox(height: 10),
-                      Text('Transfer',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 50, color: Colors.white,fontFamily: 'Comfortaa'),
-                      ),
-                    ],
+              Spacer(),
+              Text('File \nTransfer',
+                style: TextStyle(fontWeight: FontWeight.w300, fontSize: 50, color: Colors.white,),
+              ),
+              Padding(
+                padding: EdgeInsets.fromLTRB(15,55,15,20),
+                child: TextField(
+                  controller: username,
+                  style: TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.person,color: Colors.white,size: 30),
+                    labelText: 'Username',
+                    labelStyle: TextStyle(color: Colors.white, fontSize: 20,),
+                    enabledBorder: outlineInputBorder,
+                    focusedBorder: outlineInputBorder,
+                    errorBorder: outlineInputBorder,
+                    focusedErrorBorder: outlineInputBorder,
                   ),
                 ),
               ),
-              Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(40,30,40,30),
-                          child: TextFormField(
-                            controller: nameController,
-                            style: TextStyle(color: Colors.white),
-                            decoration: InputDecoration(
-                                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.white)),
-                                border: OutlineInputBorder(),
-                                prefixIcon: Icon(Icons.person,color: Colors.white,size: 30),
-                                labelText: 'Username',
-                                labelStyle: TextStyle(color: Colors.white, fontSize: 20, fontFamily: 'Comfortaa'),
-                                hintText: 'e.g. Viraj',
-                                hintStyle: TextStyle(color: Colors.white,fontFamily: 'Comfortaa')
-                            ),
-                            validator: (text) {
-                              if (text.isEmpty)
-                                return 'Username can\'t be empty.';
-                              else if(text.length < 3)
-                                return 'Username must be at least 3 characters.';
-                              else if(text.length > 10)
-                                return 'Username must be less than 10 characters.';
-                              else
-                                return null;
-                            },
-                          ),
-                        ),
-                      ],
+              Container(
+                height: 80,
+                width: MediaQuery.of(context).size.width,
+                padding: EdgeInsets.all(10),
+                child: ElevatedButton(
+                  child: Text('Continue',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w300,
                     ),
                   ),
-                  Container(
-                    height: 50,
-                    width: 180,
-                    child: ElevatedButton(
-                      child: Text('Continue',
-                          style: TextStyle(fontSize: 20,fontFamily: 'Comfortaa',fontWeight: FontWeight.bold,color: Color(0xFF667eea))
-                      ),
-                      onPressed: (){
-                        if(_formKey.currentState.validate()){
-                          var nameEntered = nameController.text;
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                                builder: (context) => Send(userName: nameEntered)
-                            ),
-                          );
-                        }
-                      },
-                      style: ElevatedButton.styleFrom(
-                        primary: Colors.white,
-                        elevation: 20,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(50)
-                        ),
-                      ),
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    primary: Colors.black.withOpacity(0.4),
+                    shadowColor: Colors.transparent,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                   ),
-                ],
+                  onPressed: (){
+                    if (username.text.trim().isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                        content: Text(
+                          'Username can\'t be empty',
+                          style: TextStyle(color: Colors.red),
+                        ),
+                        backgroundColor: Colors.white,
+                        duration: Duration(seconds: 2),
+                      ));
+                      return;
+                    }
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                          builder: (context) => Share(username: username.text.trim())
+                      ),
+                    );
+                  },
+                ),
               ),
+              SizedBox(height: 20)
             ],
           ),
         ),
@@ -116,3 +98,10 @@ class _LoginState extends State<Login> {
     );
   }
 }
+
+OutlineInputBorder outlineInputBorder = OutlineInputBorder(
+    borderSide: BorderSide(
+        color: Colors.black
+    ),
+    borderRadius: BorderRadius.circular(12)
+);
