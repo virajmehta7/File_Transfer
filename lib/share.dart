@@ -6,11 +6,10 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nearby_connections/nearby_connections.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' as io;
 
 class Share extends StatefulWidget {
-
   final username;
   const Share({Key? key, this.username}) : super(key: key);
 
@@ -20,23 +19,23 @@ class Share extends StatefulWidget {
 
 class _ShareState extends State<Share> {
 
-  final Strategy strategy = Strategy.P2P_CLUSTER;
-  Map<String, ConnectionInfo> endpointMap = Map();
-  bool pressed = false;
-  String? tempFileUri; //reference to the file currently being transferred
-  Map<int, String> map =
-  Map(); //store filename mapped to corresponding payloadId
-  String cId = "0";
-  String? encFilepath,aesFilepath,directory,decFilepath;
+  final Strategy strategy = Strategy.P2P_STAR;
   var crypt = AesCrypt('cool password');
 
+  bool pressed = false;
+  String cId = "0";
+  String? tempFileUri;
+  String? encFilepath,aesFilepath,directory,decFilepath;
+
+  Map<int, String> map = Map();
+  Map<String, ConnectionInfo> endpointMap = Map();
+
   permissions() async {
-    Map<Permission, PermissionStatus> statuses = await [
+    await [
       Permission.storage,
       Permission.location,
     ].request();
     await Nearby().enableLocationServices();
-    print(statuses);
   }
 
   @override
@@ -63,7 +62,11 @@ class _ShareState extends State<Share> {
           ),
         ),
         title: Text('File Transfer',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w300, fontSize: 22),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w300,
+            fontSize: 22,
+          ),
         ),
         elevation: 0,
         backgroundColor: Colors.transparent,
@@ -315,28 +318,27 @@ class _ShareState extends State<Share> {
                     SizedBox(height: 10),
                     GestureDetector(
                       onTap: () async {
-                        PickedFile? file =  await ImagePicker().getImage(source: ImageSource.camera);
+
+                        var file =  await ImagePicker().pickImage(source: ImageSource.camera);
+
                         encFilepath = file!.path;
                         crypt.setOverwriteMode(AesCryptOwMode.on);
                         try {
-                          aesFilepath = await crypt.encryptFile(encFilepath);
-                          print('The encryption has been completed successfully.');
-                        } on AesCryptException catch (e) {
-                          if (e.type == AesCryptExceptionType.destFileExists) {
-                            print('The encryption has been completed unsuccessfully.');
-                          }
-                          return;
+                          aesFilepath = await crypt.encryptFile(encFilepath).then((value) async {
+                            for (MapEntry<String, ConnectionInfo> m
+                            in endpointMap.entries) {
+                              int payloadId =
+                              await Nearby().sendFilePayload(m.key, value);
+                              showSnackbar("Sending file to ${m.key}");
+                              Nearby().sendBytesPayload(
+                                  m.key,
+                                  Uint8List.fromList(
+                                      "$payloadId:${value.split('/').last}".codeUnits));
+                            }
+                          });
+                        } catch(e) {
+                          print(e);
                         }
-                        int payloadId = await Nearby().sendFilePayload(cId, aesFilepath!);
-                        showSnackbar("Sending file");
-                        Nearby().sendBytesPayload(
-                            cId,
-                            Uint8List.fromList(
-                                "$payloadId:${file.path
-                                    .split('/')
-                                    .last}".codeUnits
-                            )
-                        );
                       },
                       child: Container(
                         height: 50,
@@ -376,7 +378,24 @@ class _ShareState extends State<Share> {
     await Nearby().copyFileAndDeleteOriginal(uri, '$parentDir/$fileName');
 
     showSnackbar("Moved file:" + b.toString());
+    await decrypt();
     return b;
+  }
+
+  Future decrypt() async {
+    directory = '/storage/emulated/0/Download';
+    List file = io.Directory("$directory").listSync();
+
+    for(int i = 0; i < file.length; i++) {
+      crypt.setOverwriteMode(AesCryptOwMode.on);
+      try {
+        decFilepath = directory;
+        decFilepath = await crypt.decryptFile(file[i].path);
+        file[i].delete();
+      } catch (e) {
+        print(e);
+      }
+    }
   }
 
   void onConnectionInit(String id, ConnectionInfo info) {
@@ -385,11 +404,10 @@ class _ShareState extends State<Share> {
       builder: (builder) {
         return Center(
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Text("id: " + id),
               Text("Token: " + info.authenticationToken),
               Text("Name" + info.endpointName),
-              Text("Incoming: " + info.isIncomingConnection.toString()),
               ElevatedButton(
                 child: Text("Accept Connection"),
                 onPressed: () {
@@ -463,6 +481,7 @@ class _ShareState extends State<Share> {
                   }
                 },
               ),
+              SizedBox(height: 10),
             ],
           ),
         );
@@ -470,3 +489,12 @@ class _ShareState extends State<Share> {
     );
   }
 }
+
+
+
+
+//
+//
+// flutter build apk --release --no-sound-null-safety
+//
+//
