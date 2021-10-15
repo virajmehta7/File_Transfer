@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 import 'package:aes_crypt/aes_crypt.dart';
 import 'package:file_picker/file_picker.dart';
@@ -268,21 +269,31 @@ class _ShareState extends State<Share> {
                   children: [
                     GestureDetector(
                       onTap: () async {
-                        PickedFile? file =
-                        await ImagePicker().getImage(source: ImageSource.gallery);
 
-                        if (file == null) return;
+                        FilePickerResult? result = await FilePicker.platform.pickFiles(allowMultiple: true, type: FileType.any);
 
-                        for (MapEntry<String, ConnectionInfo> m
-                        in endpointMap.entries) {
-                          int payloadId =
-                          await Nearby().sendFilePayload(m.key, file.path);
-                          showSnackbar("Sending file to ${m.key}");
-                          Nearby().sendBytesPayload(
-                              m.key,
-                              Uint8List.fromList(
-                                  "$payloadId:${file.path.split('/').last}".codeUnits));
-                        }
+                        if (result == null) return;
+
+                        result.files.forEach((element) async {
+                          encFilepath = element.path;
+                          crypt.setOverwriteMode(AesCryptOwMode.on);
+                          try {
+                            aesFilepath = await crypt.encryptFile(encFilepath).then((value) async {
+                              for (MapEntry<String, ConnectionInfo> m
+                              in endpointMap.entries) {
+                                int payloadId =
+                                    await Nearby().sendFilePayload(m.key, value);
+                                showSnackbar("Sending file to ${m.key}");
+                                Nearby().sendBytesPayload(
+                                    m.key,
+                                    Uint8List.fromList(
+                                        "$payloadId:${value.split('/').last}".codeUnits));
+                              }
+                            });
+                          } catch(e) {
+                            print(e);
+                          }
+                        });
                       },
                       child: Container(
                         height: 50,
@@ -360,7 +371,7 @@ class _ShareState extends State<Share> {
   }
 
   Future<bool> moveFile(String uri, String fileName) async {
-    String parentDir = (await getExternalStorageDirectory())!.absolute.path;
+    String parentDir = '/storage/emulated/0/Download/';
     final b =
     await Nearby().copyFileAndDeleteOriginal(uri, '$parentDir/$fileName');
 
@@ -458,156 +469,4 @@ class _ShareState extends State<Share> {
       },
     );
   }
-
 }
-
-
-
-
-// Center(
-// child: Padding(
-// padding: const EdgeInsets.all(8.0),
-// child: ListView(
-// children: <Widget>[
-// Text("User Name: " + widget.username),
-// Wrap(
-// children: <Widget>[
-// ElevatedButton(
-// child: Text("Start Advertising"),
-// onPressed: () async {
-// try {
-// bool a = await Nearby().startAdvertising(
-// widget.username,
-// strategy,
-// onConnectionInitiated: onConnectionInit,
-// onConnectionResult: (id, status) {
-// showSnackbar(status);
-// },
-// onDisconnected: (id) {
-// showSnackbar(
-// "Disconnected: ${endpointMap[id]!.endpointName}, id $id");
-// setState(() {
-// endpointMap.remove(id);
-// });
-// },
-// );
-// showSnackbar("ADVERTISING: " + a.toString());
-// } catch (exception) {
-// showSnackbar(exception);
-// }
-// },
-// ),
-// ElevatedButton(
-// child: Text("Stop Advertising"),
-// onPressed: () async {
-// await Nearby().stopAdvertising();
-// },
-// ),
-// ],
-// ),
-// Wrap(
-// children: <Widget>[
-// ElevatedButton(
-// child: Text("Start Discovery"),
-// onPressed: () async {
-// try {
-// bool a = await Nearby().startDiscovery(
-// widget.username,
-// strategy,
-// onEndpointFound: (id, name, serviceId) {
-// // show sheet automatically to request connection
-// showModalBottomSheet(
-// context: context,
-// builder: (builder) {
-// return Center(
-// child: Column(
-// children: <Widget>[
-// Text("id: " + id),
-// Text("Name: " + name),
-// Text("ServiceId: " + serviceId),
-// ElevatedButton(
-// child: Text("Request Connection"),
-// onPressed: () {
-// Navigator.pop(context);
-// Nearby().requestConnection(
-// widget.username,
-// id,
-// onConnectionInitiated: (id, info) {
-// onConnectionInit(id, info);
-// },
-// onConnectionResult: (id, status) {
-// showSnackbar(status);
-// },
-// onDisconnected: (id) {
-// setState(() {
-// endpointMap.remove(id);
-// });
-// showSnackbar(
-// "Disconnected from: ${endpointMap[id]!.endpointName}, id $id");
-// },
-// );
-// },
-// ),
-// ],
-// ),
-// );
-// },
-// );
-// },
-// onEndpointLost: (id) {
-// showSnackbar(
-// "Lost discovered Endpoint: ${endpointMap[id]!.endpointName}, id $id");
-// },
-// );
-// showSnackbar("DISCOVERING: " + a.toString());
-// } catch (e) {
-// showSnackbar(e);
-// }
-// },
-// ),
-// ElevatedButton(
-// child: Text("Stop Discovery"),
-// onPressed: () async {
-// await Nearby().stopDiscovery();
-// },
-// ),
-// ],
-// ),
-// Text("Number of connected devices: ${endpointMap.length}"),
-// ElevatedButton(
-// child: Text("Stop All Endpoints"),
-// onPressed: () async {
-// await Nearby().stopAllEndpoints();
-// setState(() {
-// endpointMap.clear();
-// });
-// },
-// ),
-// Divider(),
-// Text(
-// "Sending Data",
-// ),
-// ElevatedButton(
-// child: Text("Send File Payload"),
-// onPressed: () async {
-// PickedFile? file =
-//     await ImagePicker().getImage(source: ImageSource.gallery);
-//
-// if (file == null) return;
-//
-// for (MapEntry<String, ConnectionInfo> m
-// in endpointMap.entries) {
-// int payloadId =
-// await Nearby().sendFilePayload(m.key, file.path);
-// showSnackbar("Sending file to ${m.key}");
-// Nearby().sendBytesPayload(
-// m.key,
-// Uint8List.fromList(
-// "$payloadId:${file.path.split('/').last}".codeUnits));
-// }
-// },
-// ),
-// ],
-// ),
-// ),
-// ),
