@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io' as io;
 
 class Share extends StatefulWidget {
   final username;
@@ -22,7 +21,6 @@ class _ShareState extends State<Share> {
   final Strategy strategy = Strategy.P2P_STAR;
   var crypt = AesCrypt('cool password');
 
-  bool pressed = false;
   String cId = "0";
   String? tempFileUri;
   String? encFilepath,aesFilepath,directory,decFilepath;
@@ -131,9 +129,9 @@ class _ShareState extends State<Share> {
                     ),
                     onPressed: () async {
                       if (await Permission.location.isGranted && await Nearby().enableLocationServices() && await Permission.storage.isGranted) {
-                        setState(() {
-                          pressed = true;
-                        });
+                        // setState(() {
+                        //   pressed = true;
+                        // });
                         try {
                           bool a = await Nearby().startDiscovery(
                             widget.username,
@@ -238,9 +236,9 @@ class _ShareState extends State<Share> {
                     ),
                     onPressed: () async {
                       if (await Permission.location.isGranted && await Nearby().enableLocationServices() && await Permission.storage.isGranted) {
-                        setState(() {
-                          pressed = false;
-                        });
+                        // setState(() {
+                        //   pressed = false;
+                        // });
                         try {
                           bool a = await Nearby().startAdvertising(
                             widget.username,
@@ -267,7 +265,7 @@ class _ShareState extends State<Share> {
                 ],
               ),
               SizedBox(height: 30),
-              if (pressed)
+              // if (pressed)
                 Column(
                   children: [
                     GestureDetector(
@@ -373,29 +371,54 @@ class _ShareState extends State<Share> {
   }
 
   Future<bool> moveFile(String uri, String fileName) async {
-    String parentDir = '/storage/emulated/0/Download/';
+    String parentDir = '/storage/emulated/0/Download';
+
+
     final b =
     await Nearby().copyFileAndDeleteOriginal(uri, '$parentDir/$fileName');
 
     showSnackbar("Moved file:" + b.toString());
-    await decrypt();
+    await decrypt(parentDir, fileName);
     return b;
   }
 
-  Future decrypt() async {
-    directory = '/storage/emulated/0/Download';
-    List file = io.Directory("$directory").listSync();
+  Future decrypt(parentDir, fileName) async {
 
-    for(int i = 0; i < file.length; i++) {
+    var file = parentDir + '/' + fileName;
+
       crypt.setOverwriteMode(AesCryptOwMode.on);
       try {
-        decFilepath = directory;
-        decFilepath = await crypt.decryptFile(file[i].path);
-        file[i].delete();
+        decFilepath = parentDir;
+        decFilepath = await crypt.decryptFile(file);
+        deleteFile(File(file));
       } catch (e) {
         print(e);
       }
-    }
+  }
+
+  List<FileSystemEntity> ?files;
+
+  deleteFile(File file) async {
+
+    Directory dir = Directory('/storage/emulated/0/Download');
+    setState(() {
+      files = dir.listSync(recursive: true, followLinks: false);
+      for(FileSystemEntity entity in files!) {
+        String path = entity.path;
+        if(path.endsWith('.aes'))
+          File(path).delete();
+      }
+    });
+
+
+    // try {
+    //   if (await file.exists()) {
+    //     await file.delete();
+    //     print('deleted');
+    //   }
+    // } catch (e) {
+    //   print(e);
+    // }
   }
 
   void onConnectionInit(String id, ConnectionInfo info) {
